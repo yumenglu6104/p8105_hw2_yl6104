@@ -16,7 +16,7 @@ library(tidyverse)
 ```
 
 ```{r}
-pols = read_csv("data/fivethirtyeight_datasets/pols-month.csv") %>% 
+pols = read_csv("data/fivethirtyeight_datasets/pols-month.csv", na = c(".", "NA", "")) %>% 
   separate(mon, into = c("year", "month", "day"), sep = "-") %>% 
   mutate(across(c("year", "month", "day"), as.integer),
          # turn month number into month name
@@ -30,7 +30,7 @@ pols = read_csv("data/fivethirtyeight_datasets/pols-month.csv") %>%
 head(pols)
 ```
 ```{r}
-snp = read_csv("data/fivethirtyeight_datasets/snp.csv") %>% 
+snp = read_csv("data/fivethirtyeight_datasets/snp.csv", na = c(".", "NA", "")) %>% 
   mutate(date = mdy(date)) %>% 
   separate(date, into = c("year", "month", "day"), sep = "-") %>% 
   mutate(
@@ -43,7 +43,7 @@ snp = read_csv("data/fivethirtyeight_datasets/snp.csv") %>%
 head(snp)
 ```
 ```{r}
-unemployment = read_csv("data/fivethirtyeight_datasets/unemployment.csv") %>% 
+unemployment = read_csv("data/fivethirtyeight_datasets/unemployment.csv", na = c(".", "NA", "")) %>% 
   pivot_longer(cols = "Jan":"Dec", names_to = "month", values_to = "unemployment_rate") %>% 
   mutate(month = month.name[match(month, month.abb)]) %>% 
   rename("year" = "Year")
@@ -55,33 +55,31 @@ final_data = pols %>%
   left_join(unemployment, by = c("year", "month"))
 ```
 
-The **`pols-month`** dataset has `r nrow(pols)` rows and `r ncol(pols)` columns, covering the years from `r min(pols$year, na.rm = TRUE)` to `r max(pols$year, na.rm = TRUE)`. It contains monthly information on U.S. politics, including the party of the sitting president, and counts of governors, senators, and representatives by party. 
+The **`pols-month`** dataset has `r nrow(pols)` rows and `r ncol(pols)` columns, covering the years from `r min(pols$year, na.rm = TRUE)` to `r max(pols$year, na.rm = TRUE)`. It contains monthly information on U.S. politics, including the party of the sitting president, and counts of governors, senators, and representatives by party. Variables: `r names(pols)`
 
-The **`snp`** dataset dataset has `r nrow(snp)` rows and `r ncol(snp)` columns, covering the years from `r min(snp$year, na.rm = TRUE)` to `r max(snp$year, na.rm = TRUE)`. It provides monthly closing values of the S&P 500 index. 
+The **`snp`** dataset dataset has `r nrow(snp)` rows and `r ncol(snp)` columns, covering the years from `r min(snp$year, na.rm = TRUE)` to `r max(snp$year, na.rm = TRUE)`. It provides monthly closing values. Variables: `r names(snp)`
 
-The **`unemployment`** dataset has `r nrow(unemployment)` rows and `r ncol(unemployment)` columns, covering the years from `r min(unemployment$year, na.rm = TRUE)` to `r max(unemployment$year, na.rm = TRUE)`. It records U.S. unemployment rates by month and year.
+The **`unemployment`** dataset has `r nrow(unemployment)` rows and `r ncol(unemployment)` columns, covering the years from `r min(unemployment$year, na.rm = TRUE)` to `r max(unemployment$year, na.rm = TRUE)`. It records U.S. unemployment rates by month and year. Variables: `r names(unemployment)`
 
 After cleaning and merging, the resulting dataset has **`r nrow(final_data)` observations** and **`r ncol(final_data)` variables**, spanning the years **`r min(final_data$year, na.rm=TRUE)` to `r max(final_data$year, na.rm=TRUE)`**. Key variables include the political party of the president (`president`), counts of political officials (e.g., `sen_gop`, `sen_dem`, `rep_gop`, `rep_dem`), the stock market closing value (`close`), and the monthly unemployment rate (`unemployment_rate`).
 
 
 ## Problem 2
 ```{r, message=FALSE, warning=FALSE}
-mr = readxl::read_excel("data/202509 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", skip = 1) %>% 
-  select(-starts_with("...")) %>% 
+mr = readxl::read_excel("data/202509 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = "A2:N709", na = c(".", "NA", "")) %>% 
   janitor::clean_names() %>% 
   drop_na(dumpster) %>% 
   mutate(sports_balls = as.integer(round(sports_balls, 0)),
          trash_wheel = "Mr",
          year = as.numeric(year))
 
-professor = readxl::read_excel("data/202509 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", skip = 1) %>% 
+professor = readxl::read_excel("data/202509 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = "A2:M134", na = c(".", "NA", "")) %>% 
   janitor::clean_names() %>% 
   drop_na(dumpster) %>% 
   mutate(sports_balls = NA_integer_,
          trash_wheel = "Professor")
   
-
-gwynnda = readxl::read_excel("data/202509 Trash Wheel Collection Data.xlsx", sheet = "Gwynns Falls Trash Wheel", skip = 1) %>% 
+gwynnda = readxl::read_excel("data/202509 Trash Wheel Collection Data.xlsx", sheet = "Gwynns Falls Trash Wheel", range = "A2:L351", na = c(".", "NA", "")) %>% 
   janitor::clean_names() %>% 
   drop_na(dumpster) %>% 
   mutate(sport_balls = NA_integer_,
@@ -90,10 +88,10 @@ gwynnda = readxl::read_excel("data/202509 Trash Wheel Collection Data.xlsx", she
 trash_data = bind_rows(mr, professor, gwynnda) %>% 
   relocate(sport_balls, .before = trash_wheel)
 head(trash_data)
-
-skimr::skim(gwynnda)
 ```
-The combined **Trash Wheel** dataset contains `r nrow(trash_data)` observations and `r ncol(trash_data)` variables, compiled from Mr. Trash Wheel, Professor Trash Wheel, and Gwynnda. Key variables include `dumpster` (the dumpster identifier), `date` (the collection date), `weight_tons` (the amount of trash collected), and `cigarette_butts` (the count of cigarette butts collected), ect. The dataset also includes a `trash_wheel` variable identifying which trash wheel collected the data. Across the available data, **Professor Trash Wheel** collected a total of `r sum(professor$weight_tons, na.rm = TRUE)` tons of trash. In **June 2022**, **Gwynnda** collected `r sum(gwynnda$cigarette_butts[gwynnda$year == 2022 & gwynnda$month == "June"], na.rm = TRUE)` cigarette butts.
+The combined **Trash Wheel** dataset contains `r nrow(trash_data)` observations and `r ncol(trash_data)` variables, compiled from Mr. Trash Wheel, Professor Trash Wheel, and Gwynnda. Key variables include `dumpster` (the dumpster identifier), `date` (the collection date), `weight_tons` (the amount of trash collected), `cigarette_butts` sports_balls and name of trash wheel, ect. The dataset also includes a `trash_wheel` variable identifying which trash wheel collected the data. 
+
+Across the available data, **Professor Trash Wheel** collected a total of `r sum(professor$weight_tons, na.rm = TRUE)` tons of trash. In **June 2022**, **Gwynnda** collected `r sum(gwynnda$cigarette_butts[gwynnda$year == 2022 & gwynnda$month == "June"], na.rm = TRUE)` cigarette butts.
 
 
 ## Problem 3
@@ -118,6 +116,7 @@ zip_join = left_join(zip_zori, zip_codes_clean, by = "zip_code") %>%
   drop_na(zori_price) %>% 
   select(zip_code, county, city, date, zori_price, everything(), -state)
 
+head(zip_join)
 ```
 After cleaning and merging the ZIP code metadata with Zillow rental price data, we obtained a single tidy dataset.
 
